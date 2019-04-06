@@ -34,9 +34,6 @@ public class CasSecurityApplication {
     @Value("${cas.server.logout}")
     private String casServerLogout;
 
-    @Value("${cas.client.prefix}")
-    private String casClientPrefix;
-
     @Value("${cas.client.login}")
     private String casClientLogin;
 
@@ -49,18 +46,34 @@ public class CasSecurityApplication {
     @Value("${cas.user.inmemory}")
     private String casUserInMemory;
 
+    /**
+     *
+     * 配置CAS Client的属性
+     *
+     * @return
+     */
     @Bean
     public ServiceProperties serviceProperties() {
         ServiceProperties serviceProperties = new ServiceProperties();
+        // 与CasAuthenticationFilter监视的URL一致
         serviceProperties.setService(casClientLogin);
+        // 是否关闭单点登录，默认为false，所以也可以不设置。
         serviceProperties.setSendRenew(false);
         return serviceProperties;
     }
 
+    /**
+     *
+     * CAS认证入口，提供用户浏览器重定向的地址
+     *
+     * @param sp
+     * @return
+     */
     @Bean
     @Primary
     public AuthenticationEntryPoint authenticationEntryPoint(ServiceProperties sp) {
         CasAuthenticationEntryPoint entryPoint = new CasAuthenticationEntryPoint();
+        // CAS Server认证的登录地址
         entryPoint.setLoginUrl(casServerLogin);
         entryPoint.setServiceProperties(sp);
         return entryPoint;
@@ -68,18 +81,19 @@ public class CasSecurityApplication {
 
     /**
      *
-     * ticket校验
+     * ticket校验，需要提供CAS Server校验ticket的地址
      *
      * @return
      */
     @Bean
     public TicketValidator ticketValidator() {
+        // 默认情况下使用Cas20ProxyTicketValidator，验证入口是${casServerPrefix}/proxyValidate
         return new Cas20ProxyTicketValidator(casServerPrefix);
     }
 
     /**
      *
-     * 使用内存上的用户
+     * 使用内存上的用户并分配权限
      *
      * @return
      */
@@ -109,6 +123,14 @@ public class CasSecurityApplication {
     }
 
 
+    /**
+     *
+     * 提供CAS认证专用过滤器，过滤器的认证逻辑由CasAuthenticationProvider提供
+     *
+     * @param sp
+     * @param ap
+     * @return
+     */
     @Bean
     public CasAuthenticationFilter casAuthenticationFilter(ServiceProperties sp, AuthenticationProvider ap) {
         CasAuthenticationFilter filter = new CasAuthenticationFilter();
